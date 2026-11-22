@@ -95,7 +95,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ ({ pergunta: $json.pergunta, pedido_id: $json.pedido_id || null, usuario: $json.usuario }) }}",
         "options": {
-          "timeout": 15000
+          "timeout": 30000
         }
       },
       "name": "Consultar agente (API Python)",

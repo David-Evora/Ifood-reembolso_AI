@@ -28,13 +28,13 @@ flowchart TD
 | Embeddings | `rag/embeddings.py` | TF-IDF offline | embeddings densos (interface `Embedder`) |
 | Banco vetorial | `rag/store.py` | índice em memória | pgvector, Qdrant, OpenSearch |
 | Recuperação | `rag/retriever.py`, `rag/consulta.py` | top-k + limite de score; consulta enriquecida pelos fatos | busca híbrida, reranker |
-| LLM + contexto | `generation/redator.py` | template determinístico | LLM reescrevendo `resumo` (interface `Redator`) |
+| LLM + contexto | `generation/redator.py`, `llm/redator.py` | template determinístico; LLM opcional (`LLM_PROVEDOR`) reescreve o `resumo` | outros provedores (interface `ClienteLLM`) |
 
 ## Quem decide o quê
 
 - **O motor de regras** (`rules/engine.py`) decide a elegibilidade. É determinístico e cada regra declara de quais fontes depende.
 - **O RAG** prova a decisão. A verificação só libera a resposta se a recuperação trouxe as fontes de que a regra depende (`fundamentada`).
-- **O LLM, quando entrar,** só redige. Ele não decide e não pode liberar o que a verificação bloqueou.
+- **O LLM, quando ligado,** só redige e, opcionalmente, revisa. Ele não decide e não pode liberar o que a verificação bloqueou. O redator recebe apenas o parecer e os trechos da base, nunca o texto do usuário, e a saída só vale se citar todas as fontes; senão vale o template.
 
 ## Verificação de confiabilidade (`verification/verificador.py`)
 
@@ -47,7 +47,7 @@ flowchart TD
 | `recuperacao_forte` | 0.15 | não | similaridade abaixo de `SCORE_FORTE` |
 | `causa_confirmada` | 0.10 | não | a causa veio só da descrição, sem confirmação da API |
 
-Aprovado = nota ≥ 0.70 e nenhum eliminatório falhou. Quando um eliminatório falha, a nota é limitada a 0.69, para nunca contradizer o bloqueio. Um `Juiz` opcional (segunda avaliação do modelo) pode vetar depois dos controles determinísticos.
+Aprovado = nota ≥ 0.70 e nenhum eliminatório falhou. Quando um eliminatório falha, a nota é limitada a 0.69, para nunca contradizer o bloqueio. Um juiz com LLM opcional (`llm/juiz.py`, `LLM_JUIZ=true`) pode vetar depois dos controles determinísticos. Ele falha fechado: revisor fora do ar ou resposta fora do formato contam como veto.
 
 ## Decisões possíveis
 

@@ -1,7 +1,10 @@
-"""Cria o .env a partir do .env.example, gerando os segredos que estiverem vazios.
+"""Cria o .env a partir do .env.example, gerando só os segredos DO SISTEMA que estiverem vazios.
 
 Uso: python scripts/gerar_env.py [--saida CAMINHO] [--force]
-Não sobrescreve um .env existente (use --force). Não imprime os valores gerados.
+
+- Gera: AGENTE_API_KEY, N8N_ENCRYPTION_KEY, WEBHOOK_TOKEN, UI_SENHA.
+- Não toca nas variáveis LLM_* (provedor, chave e modelo): ficam em branco para você preencher.
+- Não sobrescreve um .env existente (use --force). Não imprime os valores gerados.
 """
 import argparse
 import os
@@ -11,7 +14,8 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
-SEGREDOS = ("AGENTE_API_KEY", "N8N_ENCRYPTION_KEY", "WEBHOOK_TOKEN")
+# chave -> bytes aleatórios (o texto gerado é ~1,3x maior); UI_SENHA é digitada no login, então é mais curta
+SEGREDOS = {"AGENTE_API_KEY": 32, "N8N_ENCRYPTION_KEY": 32, "WEBHOOK_TOKEN": 32, "UI_SENHA": 18}
 
 
 def main() -> int:
@@ -26,9 +30,9 @@ def main() -> int:
 
     texto = (RAIZ / ".env.example").read_text(encoding="utf-8")
     gerados = []
-    for chave in SEGREDOS:
-        texto, n = re.subn(rf"^{chave}=\s*$", lambda _m, c=chave: f"{c}={secrets.token_urlsafe(32)}", texto, flags=re.M)
-        if n:
+    for chave, n in SEGREDOS.items():
+        texto, achou = re.subn(rf"^{chave}=\s*$", lambda _m, c=chave, n=n: f"{c}={secrets.token_urlsafe(n)}", texto, flags=re.M)
+        if achou:
             gerados.append(chave)
 
     a.saida.write_text(texto, encoding="utf-8")
@@ -37,7 +41,8 @@ def main() -> int:
     except OSError:
         pass
     print(f"{a.saida} criado. Segredos gerados: {', '.join(gerados)}.")
-    print("Edite USUARIOS_PERMITIDOS com os e-mails que podem usar o agente.")
+    print("Falta você: editar USUARIOS_PERMITIDOS e, se for usar LLM, preencher LLM_PROVEDOR, LLM_API_KEY e LLM_MODELO.")
+    print("A senha de login da interface é o valor de UI_SENHA no .env (pode trocar por outra de 12+ caracteres).")
     return 0
 
 

@@ -35,6 +35,15 @@ SUPORTE_URL = os.getenv("AGENTE_SUPORTE_URL", "https://suporte.interno.exemplo/r
 API_KEY = os.getenv("AGENTE_API_KEY", "")  # obrigatória: a API não sobe sem ela e exige o cabeçalho X-API-Key
 API_KEY_TAMANHO_MINIMO = 32
 
+# --- LLM (opcional): desligado enquanto LLM_PROVEDOR estiver vazio ---
+LLM_PROVEDOR = os.getenv("LLM_PROVEDOR", "")  # anthropic | openai (compatíveis via LLM_URL_BASE)
+LLM_API_KEY = os.getenv("LLM_API_KEY", "")    # chave do provedor do modelo (não confundir com AGENTE_API_KEY)
+LLM_MODELO = os.getenv("LLM_MODELO", "")
+LLM_URL_BASE = os.getenv("LLM_URL_BASE", "")
+LLM_REDATOR = os.getenv("LLM_REDATOR", "true").strip().lower() in ("1", "true", "sim", "yes")
+LLM_JUIZ = os.getenv("LLM_JUIZ", "false").strip().lower() in ("1", "true", "sim", "yes")
+LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "10"))  # segundos por chamada
+
 # --- Interface web (ui.py) ---
 UI_SENHA = os.getenv("UI_SENHA", "")  # senha do login; o usuário do login é o e-mail, validado pelo n8n
 UI_SENHA_TAMANHO_MINIMO = 12

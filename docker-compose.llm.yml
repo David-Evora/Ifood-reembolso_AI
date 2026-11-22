@@ -1,0 +1,8 @@
+# Override opcional: dá ao agente acesso à internet para chamar o provedor do LLM.
+# Sem este arquivo o agente fica isolado (rede interna) e o LLM não funciona.
+# Ative no .env com:  COMPOSE_FILE=docker-compose.yml:docker-compose.llm.yml
+# (no Windows o separador é ponto e vírgula:  COMPOSE_FILE=docker-compose.yml;docker-compose.llm.yml)
+services:
+  agente:
+    networks:
+      - default

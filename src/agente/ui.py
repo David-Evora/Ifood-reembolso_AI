@@ -75,7 +75,7 @@ def _chamar_n8n(usuario: str, p: Pergunta) -> JSONResponse:
     req = request.Request(config.UI_WEBHOOK_URL, data=corpo, method="POST", headers={
         "Content-Type": "application/json", "X-Webhook-Token": config.WEBHOOK_TOKEN})
     try:
-        with request.urlopen(req, timeout=20) as r:
+        with request.urlopen(req, timeout=35) as r:
             return JSONResponse(json.loads(r.read(LIMITE_RESPOSTA)))
     except HTTPError as e:
         try:

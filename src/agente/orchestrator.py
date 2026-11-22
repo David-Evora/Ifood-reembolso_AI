@@ -7,6 +7,7 @@ import time
 from . import config
 from .generation.redator import Redator, RedatorTemplate, montar_resposta
 from .integrations.pedidos import MockPedidosClient, PedidosClient, aplicar_pedido
+from .llm import JuizLLM, RedatorLLM, criar_cliente
 from .models import Resposta
 from .rag.consulta import montar_consulta
 from .rag.embeddings import TfidfEmbedder
@@ -60,7 +61,14 @@ class Agente:
 
 
 def criar_agente() -> Agente:
-    """Monta o agente com os padrões: base em CSV, TF-IDF em memória e API de pedidos mock."""
+    """Monta o agente com os padrões: base em CSV, TF-IDF em memória e API de pedidos mock.
+
+    Se LLM_PROVEDOR estiver definido, liga o redator e/ou o juiz com LLM (LLM_REDATOR, LLM_JUIZ).
+    """
     indice = IndiceVetorial(TfidfEmbedder())
     indice.construir(carregar_base(config.CSV_BASE))
-    return Agente(Recuperador(indice), pedidos=MockPedidosClient(config.PEDIDOS_MOCK))
+    cliente = criar_cliente()
+    redator = RedatorLLM(cliente) if cliente and config.LLM_REDATOR else None
+    juiz = JuizLLM(cliente) if cliente and config.LLM_JUIZ else None
+    return Agente(Recuperador(indice), pedidos=MockPedidosClient(config.PEDIDOS_MOCK),
+                  verificador=Verificador(juiz=juiz), redator=redator)

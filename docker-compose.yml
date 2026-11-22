@@ -24,6 +24,14 @@ services:
       AGENTE_SCORE_MINIMO: ${AGENTE_SCORE_MINIMO:-0.10}
       AGENTE_SCORE_FORTE: ${AGENTE_SCORE_FORTE:-0.25}
       AGENTE_LIMIAR_CONFIANCA: ${AGENTE_LIMIAR_CONFIANCA:-0.70}
+      # LLM opcional: vazio = desligado. Para usar, também ative docker-compose.llm.yml (dá saída de rede ao agente).
+      LLM_PROVEDOR: ${LLM_PROVEDOR:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODELO: ${LLM_MODELO:-}
+      LLM_URL_BASE: ${LLM_URL_BASE:-}
+      LLM_REDATOR: ${LLM_REDATOR:-true}
+      LLM_JUIZ: ${LLM_JUIZ:-false}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-10}
     networks: [backend]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/saude', timeout=3)"]
