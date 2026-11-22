@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agente de Reembolsos</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Agente de Reembolsos e Cancelamentos</h1>
+      <p class="sub">Descreva o caso. O agente consulta a base de políticas e só responde quando tem fonte e confiança suficientes.</p>
+    </header>
+
+    <form id="form" novalidate>
+      <label for="pergunta">Descrição do caso</label>
+      <textarea id="pergunta" rows="4" maxlength="2000" required
+        placeholder="Ex.: O cliente quer reembolso, mas o pedido já saiu para entrega. Ainda é permitido?"></textarea>
+
+      <label for="pedido">Número do pedido <span class="opcional">(opcional, só dígitos)</span></label>
+      <input id="pedido" inputmode="numeric" pattern="[0-9]{3,20}" maxlength="20" autocomplete="off" placeholder="1001">
+
+      <div class="acoes">
+        <button type="submit" id="enviar">Consultar agente</button>
+        <span id="status" role="status" aria-live="polite"></span>
+      </div>
+
+      <fieldset>
+        <legend>Exemplos</legend>
+        <div id="exemplos" class="chips"></div>
+      </fieldset>
+    </form>
+
+    <section id="resultado" aria-live="polite" tabindex="-1" hidden></section>
+
+    <footer>Base de conhecimento simulada, para fins educacionais. Não representa políticas oficiais.</footer>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

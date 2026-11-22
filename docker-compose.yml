@@ -1,0 +1,89 @@
+# Tudo que muda vem do .env (copie .env.example para .env e preencha os campos obrigatórios).
+# Rede: o agente fica numa rede interna, sem porta publicada: só o n8n o alcança.
+# A interface fala só com o n8n. As portas da interface e do n8n ficam apenas em 127.0.0.1.
+name: agente-reembolso
+
+x-endurecido: &endurecido
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+services:
+  agente:
+    <<: *endurecido
+    build: .
+    image: agente-reembolso:local
+    restart: unless-stopped
+    environment:
+      AGENTE_API_KEY: ${AGENTE_API_KEY:?defina AGENTE_API_KEY no .env}
+      AGENTE_SUPORTE_URL: ${AGENTE_SUPORTE_URL:-https://suporte.interno.exemplo/reembolsos}
+      AGENTE_BASE_CSV: ${AGENTE_BASE_CSV:-/app/data/base_conhecimento.csv}
+      AGENTE_PEDIDOS_MOCK: ${AGENTE_PEDIDOS_MOCK:-/app/data/pedidos_mock.json}
+      AGENTE_TOP_K: ${AGENTE_TOP_K:-5}
+      AGENTE_SCORE_MINIMO: ${AGENTE_SCORE_MINIMO:-0.10}
+      AGENTE_SCORE_FORTE: ${AGENTE_SCORE_FORTE:-0.25}
+      AGENTE_LIMIAR_CONFIANCA: ${AGENTE_LIMIAR_CONFIANCA:-0.70}
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/saude', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  n8n:
+    image: ${N8N_IMAGE:-docker.n8n.io/n8nio/n8n:latest}
+    restart: unless-stopped
+    depends_on:
+      agente:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${N8N_PORTA:-5678}:5678"
+    environment:
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?defina N8N_ENCRYPTION_KEY no .env}
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://localhost:5678/}
+      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      GENERIC_TIMEZONE: ${TZ:-America/Sao_Paulo}
+      TZ: ${TZ:-America/Sao_Paulo}
+      # o workflow lê estas variáveis com $env; só as listadas aqui chegam ao n8n
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      AGENTE_URL: http://agente:8000
+      AGENTE_API_KEY: ${AGENTE_API_KEY}
+      WEBHOOK_TOKEN: ${WEBHOOK_TOKEN:?defina WEBHOOK_TOKEN no .env}
+      USUARIOS_PERMITIDOS: ${USUARIOS_PERMITIDOS:?defina USUARIOS_PERMITIDOS no .env (e-mails separados por vírgula)}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n:/workflows:ro
+    networks: [backend, default]
+
+  ui:
+    <<: *endurecido
+    build: .
+    image: agente-reembolso:local
+    restart: unless-stopped
+    command: ["uvicorn", "agente.ui:app", "--host", "0.0.0.0", "--port", "8080", "--no-server-header"]
+    depends_on: [n8n]
+    ports:
+      - "127.0.0.1:${UI_PORTA:-8080}:8080"
+    environment:
+      UI_SENHA: ${UI_SENHA:?defina UI_SENHA no .env}
+      WEBHOOK_TOKEN: ${WEBHOOK_TOKEN:?defina WEBHOOK_TOKEN no .env}
+      UI_WEBHOOK_URL: ${UI_WEBHOOK_URL:-http://n8n:5678/webhook/reembolso-agente}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8080/saude', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  backend:
+    internal: true  # sem acesso à internet nem ao host: o agente só conversa com o n8n
+
+volumes:
+  n8n_data:

@@ -1,0 +1,297 @@
+{
+  "name": "Agente de Reembolsos - entrada e orquestração",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "reembolso-agente",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Pergunta do Foodlover (Webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "reembolso-agente"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Corpo esperado: { usuario, pergunta, pedido_id? }. Cabeçalho: X-Webhook-Token.\n// Segredos e lista de usuários vêm do .env (WEBHOOK_TOKEN, USUARIOS_PERMITIDOS).\nconst esperado = $env.WEBHOOK_TOKEN ?? '';\nconst recebido = $json.headers?.['x-webhook-token'] ?? '';\nconst permitidos = ($env.USUARIOS_PERMITIDOS ?? '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);\nconst b = $json.body ?? {};\nconst valido = typeof b.pergunta === 'string' && b.pergunta.length >= 3;\nconst autenticado = esperado.length >= 16 && recebido === esperado;\nconst autorizado = typeof b.usuario === 'string' && permitidos.includes(b.usuario.trim().toLowerCase());\nreturn [{ json: { ...b, permitido: autenticado && autorizado && valido } }];"
+      },
+      "name": "Identificar usuário e permissões",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "perm-1",
+              "leftValue": "={{ $json.permitido }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Tem permissão?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"erro\": \"acesso negado ou pergunta inválida\" } }}",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "name": "Responder 403",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGENTE_URL }}/consultar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.AGENTE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({ pergunta: $json.pergunta, pedido_id: $json.pedido_id || null, usuario: $json.usuario }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "name": "Consultar agente (API Python)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        200
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "hum-1",
+              "leftValue": "={{ $json.precisa_humano }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Precisa de humano?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        120
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Abrir ticket interno (placeholder)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        40
+      ],
+      "notes": "Troque por Jira/ServiceNow/Slack. Recebe a resposta do agente com 'passos' e 'suporte_url'."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "Responder com ticket",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1560,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "Responder decisão",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"decisao\": \"FALLBACK\", \"resumo\": \"Não consegui consultar o agente agora. Encaminhe para validação manual ou abra um ticket interno.\", \"precisa_humano\": true } }}",
+        "options": {
+          "responseCode": 503
+        }
+      },
+      "name": "Responder fallback (agente fora)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        380
+      ]
+    }
+  ],
+  "connections": {
+    "Pergunta do Foodlover (Webhook)": {
+      "main": [
+        [
+          {
+            "node": "Identificar usuário e permissões",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identificar usuário e permissões": {
+      "main": [
+        [
+          {
+            "node": "Tem permissão?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem permissão?": {
+      "main": [
+        [
+          {
+            "node": "Consultar agente (API Python)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 403",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar agente (API Python)": {
+      "main": [
+        [
+          {
+            "node": "Precisa de humano?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder fallback (agente fora)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Precisa de humano?": {
+      "main": [
+        [
+          {
+            "node": "Abrir ticket interno (placeholder)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder decisão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Abrir ticket interno (placeholder)": {
+      "main": [
+        [
+          {
+            "node": "Responder com ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "agenteReembolso01",
+  "active": false
+}

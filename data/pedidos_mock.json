@@ -1,0 +1,10 @@
+{
+  "1001": {"status": "saiu_para_entrega", "causa_falha": "restaurante", "pagamento": {"status": "capturado", "metodo": "cartao_credito"}},
+  "1002": {"status": "saiu_para_entrega", "causa_falha": "cliente", "pagamento": {"status": "capturado", "metodo": "pix"}},
+  "1003": {"status": "saiu_para_entrega", "causa_falha": null, "pagamento": {"status": "capturado", "metodo": "cartao_credito"}},
+  "1004": {"status": "saiu_para_entrega", "causa_falha": "entregador", "pagamento": {"status": "capturado", "metodo": "cartao_credito"}},
+  "1005": {"status": "saiu_para_entrega", "causa_falha": "app", "pagamento": {"status": "capturado", "metodo": "pix"}},
+  "1006": {"status": "cancelado", "causa_falha": "restaurante", "pagamento": {"status": "capturado", "metodo": "cartao_credito"}},
+  "1007": {"status": "entregue", "causa_falha": null, "pagamento": {"status": "capturado", "metodo": "cartao_debito"}},
+  "1008": {"status": "em_preparo", "causa_falha": null, "pagamento": {"status": "estornado", "metodo": "pix"}}
+}
